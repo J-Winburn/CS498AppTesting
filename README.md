@@ -1,10 +1,8 @@
-
 # CS498AppTesting
-Repo for testing our CS498 application
-=======
-# Spotify Search Frontend
 
-A simple `Next.js` frontend that searches the Spotify API for songs and artists.
+A Next.js app with two features:
+- **Spotify Search** (`/`) — search for songs and artists via the Spotify API
+- **AI Music Generation** (`/generate`) — generate original music from a text prompt using Replicate's MusicGen model
 
 ## Setup
 
@@ -17,13 +15,9 @@ A simple `Next.js` frontend that searches the Spotify API for songs and artists.
    cp .env.example .env.local
    ```
 3. Add values for:
-   - `SPOTIFY_CLIENT_ID`
-   - `SPOTIFY_CLIENT_SECRET`
+   - `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` — from the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - `REPLICATE_API_TOKEN` — from [replicate.com](https://replicate.com) (free credits available, no card required)
 4. Start the app:
    ```bash
    npm run dev
    ```
-
-## Spotify credentials
-
-Create an app at the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) to get your client ID and client secret.

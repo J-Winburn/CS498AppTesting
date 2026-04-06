@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 type SearchScope = "all" | "track" | "artist";
@@ -83,9 +84,17 @@ export default function Home() {
     <main className="min-h-screen px-4 py-10 text-zinc-50">
       <div className="mx-auto max-w-6xl">
         <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-6 shadow-2xl backdrop-blur md:p-8">
-          <span className="rounded-full bg-green-500/15 px-3 py-1 text-sm font-medium text-green-300">
-            Spotify API Demo
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="rounded-full bg-green-500/15 px-3 py-1 text-sm font-medium text-green-300">
+              Spotify API Demo
+            </span>
+            <Link
+              href="/generate"
+              className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-700"
+            >
+              Generate Music →
+            </Link>
+          </div>
           <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
             Search for a song or artist
           </h1>
