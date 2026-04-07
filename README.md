@@ -24,13 +24,17 @@ Edit `.env.local` and add:
 ```
 SPOTIFY_CLIENT_ID=your_client_id_here
 SPOTIFY_CLIENT_SECRET=your_client_secret_here
-SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/api/auth/callback/spotify
+NEXTAUTH_URL=http://127.0.0.1:3000
+NEXTAUTH_SECRET=your-own-random-secret
 ```
 
 ### 4. Register Redirect URI in Spotify
 1. In your Spotify app settings, find **"Redirect URIs"**
-2. Add: `http://localhost:3000/callback`
+2. Add: `http://127.0.0.1:3000/api/auth/callback/spotify`
 3. Click **Save**
+
+> Important: Spotify treats `localhost` and `127.0.0.1` as different hosts. Use `127.0.0.1` consistently in your browser, `.env.local`, and Spotify redirect URI settings.
 
 ### 5. Start the App
 ```bash
@@ -44,10 +48,10 @@ Visit **http://localhost:3000** and click "Log in with Spotify"!
 ## Features
 
 ### 🔐 Spotify OAuth Authentication
-- Users can log in with their Spotify accounts
-- Access tokens stored securely in HTTP-only cookies
-- Automatic token refresh when expired
-- User's display name shown in header when logged in
+- Users can sign in with Spotify via NextAuth.js
+- Spotify access tokens are stored securely in the session
+- Automatic token refresh is configured for Spotify
+- User's name appears in the header when logged in
 
 ### 🔍 Smart Search
 - Logged-in users: Search uses their personal Spotify token
@@ -70,12 +74,11 @@ src/
 │   ├── layout.tsx              Root layout with Header
 │   ├── page.tsx                Main search UI
 │   ├── globals.css             Dark theme with Spotify green
-│   ├── callback/route.ts       OAuth callback handler
 │   └── api/
 │       ├── auth/
-│       │   ├── login/          Start OAuth flow
-│       │   ├── callback/       Alternative callback route
-│       │   └── logout/         Clear session
+│       │   └── [...nextauth]/  NextAuth.js authentication route
+│       ├── albums/
+│       │   └── random/         Album API endpoint
 │       └── search/             Search API endpoint
 ├── components/
 │   └── Header.tsx              Login/logout UI
@@ -143,7 +146,7 @@ Now others can visit your public URL and log in!
 |----------|----------|-------------|
 | `SPOTIFY_CLIENT_ID` | Yes | From Spotify Developer Dashboard |
 | `SPOTIFY_CLIENT_SECRET` | Yes | From Spotify Developer Dashboard |
-| `SPOTIFY_REDIRECT_URI` | Yes | Must match Spotify Dashboard exactly (e.g., `http://localhost:3000/callback` or `https://xxxx.ngrok-free.dev/callback`) |
+| `SPOTIFY_REDIRECT_URI` | Yes | Must match Spotify Dashboard exactly (e.g., `http://127.0.0.1:3000/api/auth/callback/spotify` or `https://xxxx.ngrok-free.dev/api/auth/callback/spotify`) |
 
 ---
 

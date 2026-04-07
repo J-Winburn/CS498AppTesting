@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getValidUserToken } from "@/lib/spotify-auth";
-import { getClientCredentialsToken } from "@/lib/spotify-client-credentials";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 type SpotifyAlbum = {
   id: string;
@@ -17,14 +16,12 @@ type Album = {
   image: string;
 };
 
-async function getRandomSpotifyAlbums(): Promise<Album[]> {
+async function getRandomSpotifyAlbums(accessToken: string): Promise<Album[]> {
   try {
-    const token = await getClientCredentialsToken();
-
     const response = await fetch(
       `https://api.spotify.com/v1/browse/new-releases?limit=20`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         cache: "no-store",
       }
     );
@@ -125,14 +122,13 @@ async function getRandomMusicBrainzAlbums(): Promise<Album[]> {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const userToken = await getValidUserToken(cookieStore);
+    const session = await getServerSession(authOptions);
+    const accessToken = (session as any)?.accessToken;
 
     let albums: Album[] = [];
 
-    // If user is logged in, use Spotify. Otherwise use MusicBrainz
-    if (userToken) {
-      albums = await getRandomSpotifyAlbums();
+    if (accessToken) {
+      albums = await getRandomSpotifyAlbums(accessToken);
     } else {
       albums = await getRandomMusicBrainzAlbums();
     }
