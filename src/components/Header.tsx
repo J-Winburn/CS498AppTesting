@@ -1,40 +1,57 @@
-import { cookies } from "next/headers";
-import { getValidUserToken, getSpotifyUser } from "@/lib/spotify-auth";
+"use client";
 
-export default async function Header() {
-  const cookieStore = await cookies();
-  const token = await getValidUserToken(cookieStore);
-  let user = null;
+import { useSession, signIn, signOut, getSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-  if (token) {
-    try {
-      user = await getSpotifyUser(token);
-    } catch {
-      // If fetching user fails, we'll just show login button
+export default function Header() {
+  const { data: session, status, update } = useSession();
+  const user = session?.user;
+  const [hasChecked, setHasChecked] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check for session on mount and when unauthenticated
+    if (!hasChecked || status === "unauthenticated") {
+      // Add a small delay to ensure callback has completed
+      setTimeout(() => {
+        getSession().then((serverSession) => {
+          if (serverSession && !session) {
+            update();
+            // Force a page refresh to ensure session is picked up
+            router.refresh();
+          }
+          setHasChecked(true);
+        });
+      }, 100);
     }
-  }
+  }, [status, session, update, hasChecked]);
 
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
       <h1 className="text-xl font-bold text-green-500">Spotify Search</h1>
-      <div>
-        {user ? (
+      <div className="flex items-center gap-4">
+        {status === "loading" ? (
+          <span className="text-foreground">Loading...</span>
+        ) : user ? (
           <div className="flex items-center gap-4">
-            <span className="text-foreground">{user.display_name || user.id}</span>
-            <a
-              href="/api/auth/logout"
+            <span className="text-foreground">{user.name || user.email || "Spotify user"}</span>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/" })}
               className="px-4 py-2 bg-green-500 text-black rounded font-medium hover:bg-green-600 transition"
             >
               Log out
-            </a>
+            </button>
           </div>
         ) : (
-          <a
-            href="/api/auth/login"
+          <button
+            type="button"
+            onClick={() => signIn("spotify", { callbackUrl: "/" })}
             className="px-4 py-2 bg-green-500 text-black rounded font-medium hover:bg-green-600 transition"
           >
             Log in with Spotify
-          </a>
+          </button>
         )}
       </div>
     </header>

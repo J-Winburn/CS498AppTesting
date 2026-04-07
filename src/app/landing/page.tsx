@@ -184,7 +184,7 @@ export default function Landing() {
                   (album, idx) => (
                     <div
                       key={`row1-${idx}`}
-                      className="flex-shrink-0 w-32 h-40 rounded-lg overflow-hidden bg-zinc-800 hover:shadow-lg hover:shadow-green-500/50 transition cursor-pointer"
+                      className="shrink-0 w-32 h-40 rounded-lg overflow-hidden bg-zinc-800 hover:shadow-lg hover:shadow-green-500/50 transition cursor-pointer"
                     >
                       <img
                         src={album.image}
@@ -208,7 +208,7 @@ export default function Landing() {
                   (album, idx) => (
                     <div
                       key={`row2-${idx}`}
-                      className="flex-shrink-0 w-32 h-40 rounded-lg overflow-hidden bg-zinc-800 hover:shadow-lg hover:shadow-green-500/50 transition cursor-pointer"
+                      className="shrink-0 w-32 h-40 rounded-lg overflow-hidden bg-zinc-800 hover:shadow-lg hover:shadow-green-500/50 transition cursor-pointer"
                     >
                       <img
                         src={album.image}
