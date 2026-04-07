@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getValidUserToken } from "@/lib/spotify-auth";
+import { getClientCredentialsToken } from "@/lib/spotify-client-credentials";
 
-const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search";
 
 const searchTypeMap = {
@@ -8,34 +10,6 @@ const searchTypeMap = {
   track: "track",
   artist: "artist",
 } as const;
-
-async function getSpotifyAccessToken() {
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing Spotify credentials");
-  }
-
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-  const response = await fetch(SPOTIFY_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({ grant_type: "client_credentials" }),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("Unable to authenticate with Spotify.");
-  }
-
-  const data = (await response.json()) as { access_token: string };
-  return data.access_token;
-}
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim();
@@ -49,7 +23,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const accessToken = await getSpotifyAccessToken();
+    const cookieStore = await cookies();
+    const userToken = await getValidUserToken(cookieStore);
+    const accessToken = userToken ?? (await getClientCredentialsToken());
     const searchParams = new URLSearchParams({
       q: query,
       type: searchTypeMap[type] ?? searchTypeMap.all,

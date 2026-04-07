@@ -1,40 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
+import type { Track, Artist, SearchResponse } from "@/types/spotify";
 
 type SearchScope = "all" | "track" | "artist";
-
-type Track = {
-  id: string;
-  name: string;
-  artists: { name: string }[];
-  album?: {
-    name: string;
-    images?: { url: string }[];
-  };
-  external_urls?: {
-    spotify?: string;
-  };
-};
-
-type Artist = {
-  id: string;
-  name: string;
-  genres?: string[];
-  images?: { url: string }[];
-  followers?: {
-    total: number;
-  };
-  external_urls?: {
-    spotify?: string;
-  };
-};
-
-type SearchResponse = {
-  tracks: Track[];
-  artists: Artist[];
-  error?: string;
-};
 
 const scopes: { value: SearchScope; label: string }[] = [
   { value: "all", label: "All" },
@@ -83,9 +53,17 @@ export default function Home() {
     <main className="min-h-screen px-4 py-10 text-zinc-50">
       <div className="mx-auto max-w-6xl">
         <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-6 shadow-2xl backdrop-blur md:p-8">
-          <span className="rounded-full bg-green-500/15 px-3 py-1 text-sm font-medium text-green-300">
-            Spotify API Demo
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="rounded-full bg-green-500/15 px-3 py-1 text-sm font-medium text-green-300">
+              Spotify API Demo
+            </span>
+            <Link
+              href="/landing"
+              className="rounded-full bg-purple-500/15 px-3 py-1 text-sm font-medium text-purple-300 hover:bg-purple-500/25 transition"
+            >
+              Try Landing Page →
+            </Link>
+          </div>
           <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
             Search for a song or artist
           </h1>
