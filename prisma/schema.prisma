@@ -2,12 +2,12 @@
 // learn more about it in the docs: https://pris.ly/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../node_modules/.prisma/client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -27,6 +27,7 @@ model User {
   theme           String    @default("dark")  // "dark" or "light"
   timezone        String    @default("UTC")
   notificationSettings Json  @default("{\"emailNotifications\": true, \"pushNotifications\": false}")
+  pinnedItems          Json  @default("[]")
 
   // Spotify integration (optional)
   spotifyId       String?   @unique
