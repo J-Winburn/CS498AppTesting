@@ -14,18 +14,18 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur">
         <div className="flex items-center justify-between px-6 py-4">
-          <Link href="/" className="transition hover:opacity-80">
-            <img src="/assets/logo.png" alt="TuneHeadz" className="h-12 w-auto" />
+          <Link href="/" className="text-[#fb3d93] hover:text-green-200 font-medium transition flex items-center gap-2">
+            ← Back to Home
           </Link>
 
           <nav className="flex items-center gap-6">
             {session?.user && (
               <>
                 <Link
-                  href="/favorites"
+                  href="/library"
                   className="text-sm text-zinc-400 hover:text-zinc-200 transition"
                 >
-                  Favorites
+                  Library
                 </Link>
                 <Link
                   href="/history"
@@ -52,7 +52,6 @@ export default function Header() {
               <>
                 {session?.user ? (
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-zinc-300">{session.user.name || session.user.email}</span>
                     <button
                       onClick={() => setLogoutModalOpen(true)}
                       className="rounded-full px-4 py-2 text-sm font-medium text-black transition"

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function WelcomePage() {
+  const { data: session, status } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
@@ -21,36 +23,43 @@ export default function WelcomePage() {
   const bgClass = theme === "light" ? "bg-white text-black" : "bg-black text-zinc-50";
   const navBorderClass = theme === "light" ? "border-zinc-200" : "border-zinc-800";
   const inputBgClass = theme === "light" ? "bg-zinc-100 text-black placeholder:text-zinc-600" : "bg-zinc-800 text-zinc-50 placeholder:text-zinc-500";
-  const logoSrc = theme === "light" ? "/assets/logo-light.png" : "/assets/logo-dark.png";
+  const logoSrc = "/assets/logo-light.png";
 
   return (
     <main className={`min-h-screen ${bgClass}`}>
       {/* Navbar - Exact Layout */}
-      <nav className={`border-b ${navBorderClass} px-8 py-4`}>
+      <nav className={`border-b ${navBorderClass} px-8 py-2`}>
         <div className="flex items-center justify-between">
           {/* Logo - Clickable */}
           <Link href="/" className="flex-shrink-0 hover:opacity-80 transition">
-            <img src={logoSrc} alt="TuneHeadz" className="h-20 w-auto" />
+            <img src={logoSrc} alt="TuneHeadz" className="h-24 w-auto" />
           </Link>
 
           {/* Menu Items */}
           <div className="flex items-center gap-12 text-sm font-semibold">
-            <Link href="/signin" className="uppercase px-4 py-2 border-2 border-[#fb3d93] text-[#fb3d93] rounded-lg hover:bg-[#fb3d93]/10 transition">
-              Sign In
+            {status !== "loading" && (
+              session?.user ? (
+                <Link href="/search" className="uppercase px-4 py-2 border-2 border-[#fb3d93] text-[#fb3d93] rounded-lg hover:bg-[#fb3d93] hover:text-white transition">
+                  Go to App
+                </Link>
+              ) : (
+                <>
+                  <Link href="/signin" className="uppercase px-4 py-2 border-2 border-[#fb3d93] text-[#fb3d93] rounded-lg hover:bg-[#fb3d93] hover:text-white transition">
+                    Sign In
+                  </Link>
+                  <Link href="/signup" className="uppercase hover:text-[#fb3d93] transition">
+                    Create Account
+                  </Link>
+                </>
+              )
+            )}
+            <Link href="/catalog" className="uppercase hover:text-[#fb3d93] transition">
+              Catalog
             </Link>
-            <Link href="/signup" className="uppercase px-4 py-2 rounded-lg hover:bg-[#fb3d93] transition">
-              Create Account
-            </Link>
-            <a href="#albums" className={`uppercase hover:text-[#fb3d93] transition`}>
-              Albums
-            </a>
-            <a href="#lists" className={`uppercase hover:text-[#fb3d93] transition`}>
+            <Link href="/lists" className="uppercase hover:text-[#fb3d93] transition">
               Lists
-            </a>
-            <a href="#journal" className={`uppercase hover:text-[#fb3d93] transition`}>
-              Journal
-            </a>
-            <Link href="/generate" className={`uppercase hover:text-[#fb3d93] transition`}>
+            </Link>
+            <Link href="/generate" className="uppercase hover:text-[#fb3d93] transition">
               Generate Music
             </Link>
           </div>

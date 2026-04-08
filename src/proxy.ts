@@ -15,5 +15,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/profile", "/favorites", "/history", "/generate", "/search"],
+  matcher: ["/profile", "/library", "/history", "/generate", "/search"],
 };

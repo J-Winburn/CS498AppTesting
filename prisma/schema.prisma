@@ -45,9 +45,31 @@ model User {
   generatedTracks GeneratedTrack[]
   playlists       Playlist[]
   searchHistory   SearchHistory[]
+  ratings         Rating[]
 
   @@index([email])
   @@index([spotifyId])
+}
+
+model Rating {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  spotifyId   String   // ID of the track, album, or artist
+  type        String   // "track", "album", "artist"
+  rating      Float    // 0.0 to 5.0
+  
+  // Metadata to display in the library
+  name        String?
+  imageUrl    String?
+  subtitle    String?  // e.g., artist name for a track
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, spotifyId])
+  @@index([userId])
 }
 
 model SavedTrack {
@@ -56,6 +78,7 @@ model SavedTrack {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   spotifyTrackId String
+  itemType       String    @default("track") // "track", "artist", "album"
   trackName      String
   artists        String    // JSON array stored as string
   albumName      String?

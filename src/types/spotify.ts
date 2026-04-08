@@ -21,8 +21,18 @@ export type Artist = {
   external_urls?: { spotify?: string };
 };
 
+export type Album = {
+  id: string;
+  name: string;
+  artists: { name: string }[];
+  images?: { url: string }[];
+  release_date?: string;
+  external_urls?: { spotify?: string };
+};
+
 export type SearchResponse = {
   tracks: Track[];
   artists: Artist[];
+  albums: Album[];
   error?: string;
 };

@@ -70,8 +70,8 @@ export default function HistoryPage() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-4xl font-bold">Generation History</h1>
-          <Link href="/generate" className="text-[#fb3d93] hover:text-green-200">
-            ← Back to Generate
+          <Link href="/search" className="text-[#fb3d93] hover:text-green-200">
+            ← Back to Search
           </Link>
         </div>
 

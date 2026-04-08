@@ -6,9 +6,10 @@ import { getClientCredentialsToken } from "@/lib/spotify-client-credentials";
 const SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search";
 
 const searchTypeMap = {
-  all: "track,artist",
+  all: "track,artist,album",
   track: "track",
   artist: "artist",
+  album: "album",
 } as const;
 
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   if (!query) {
     return NextResponse.json(
-      { error: "Please provide a song or artist to search for.", tracks: [], artists: [] },
+      { error: "Please provide a song, artist, or album to search for.", tracks: [], artists: [], albums: [] },
       { status: 400 },
     );
   }
@@ -46,17 +47,19 @@ export async function GET(request: NextRequest) {
     const data = (await response.json()) as {
       tracks?: { items: unknown[] };
       artists?: { items: unknown[] };
+      albums?: { items: unknown[] };
     };
 
     return NextResponse.json({
       tracks: data.tracks?.items ?? [],
       artists: data.artists?.items ?? [],
+      albums: data.albums?.items ?? [],
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected server error.";
 
     return NextResponse.json(
-      { error: message, tracks: [], artists: [] },
+      { error: message, tracks: [], artists: [], albums: [] },
       { status: 500 },
     );
   }

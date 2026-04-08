@@ -244,12 +244,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <Link href="/" className="text-pink-500 hover:text-pink-400 transition text-sm">
-            ← Back to Home
-          </Link>
-        </div>
-
         <div className="bg-zinc-900 rounded-lg border border-zinc-800">
           {/* Header */}
           <div className="bg-gradient-to-r from-pink-600 to-pink-500 px-6 py-8">

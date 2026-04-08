@@ -3,19 +3,21 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import type { Track, Artist, SearchResponse } from "@/types/spotify";
+import StarRating from "@/components/StarRating";
 
-type SearchScope = "all" | "track" | "artist";
+type SearchScope = "all" | "track" | "artist" | "album";
 
 const scopes: { value: SearchScope; label: string }[] = [
   { value: "all", label: "All" },
   { value: "track", label: "Songs" },
   { value: "artist", label: "Artists" },
+  { value: "album", label: "Albums" },
 ];
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<SearchScope>("all");
-  const [results, setResults] = useState<SearchResponse>({ tracks: [], artists: [] });
+  const [results, setResults] = useState<SearchResponse>({ tracks: [], artists: [], albums: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,8 +44,8 @@ export default function Home() {
     event.preventDefault();
 
     if (!query.trim()) {
-      setError("Please enter a song or artist name.");
-      setResults({ tracks: [], artists: [] });
+      setError("Please enter a song, artist, or album name.");
+      setResults({ tracks: [], artists: [], albums: [] });
       return;
     }
 
@@ -62,28 +64,49 @@ export default function Home() {
       setResults(data);
       await loadSavedTracks();
     } catch (err) {
-      setResults({ tracks: [], artists: [] });
+      setResults({ tracks: [], artists: [], albums: [] });
       setError(err instanceof Error ? err.message : "Unexpected error.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveTrack = async (track: Track) => {
+  const handleSaveTrack = async (item: Track | Artist | Album, type: "track" | "artist" | "album") => {
     try {
+      if (savedTrackIds.has(item.id)) {
+        // Unsave
+        const response = await fetch("/api/favorites", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ spotifyTrackId: item.id }),
+        });
+
+        if (response.ok) {
+          setSavedTrackIds((prev) => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
+          });
+        } else {
+          setError("Failed to remove item");
+        }
+        return;
+      }
+
+      // Save
       const response = await fetch("/api/favorites/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(track),
+        body: JSON.stringify({ ...item, type }),
       });
 
       if (response.ok) {
-        setSavedTrackIds((prev) => new Set([...prev, track.id]));
+        setSavedTrackIds((prev) => new Set([...prev, item.id]));
       } else {
-        setError("Failed to save track");
+        setError("Failed to save item");
       }
     } catch {
-      setError("Failed to save track");
+      setError("Failed to save item");
     }
   };
 
@@ -91,19 +114,8 @@ export default function Home() {
     <main className="min-h-screen px-4 py-10 text-zinc-50">
       <div className="mx-auto max-w-6xl">
         <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-6 shadow-2xl backdrop-blur md:p-8">
-          <div className="flex items-center justify-between">
-            <span className="rounded-full bg-[#fb3d93]/15 px-3 py-1 text-sm font-medium text-[#fb3d93]">
-              Spotify API Demo
-            </span>
-            <Link
-              href="/landing"
-              className="rounded-full bg-purple-500/15 px-3 py-1 text-sm font-medium text-purple-300 hover:bg-purple-500/25 transition"
-            >
-              Try Landing Page →
-            </Link>
-          </div>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
-            Search for a song or artist
+          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+            Search for a song, artist, or album
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-zinc-300 md:text-base">
             Type a name, choose what you want to search, and fetch matching Spotify
@@ -152,7 +164,7 @@ export default function Home() {
           ) : null}
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <section className="rounded-3xl border border-white/10 bg-zinc-950/70 p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Songs</h2>
@@ -179,7 +191,7 @@ export default function Home() {
                         {track.artists.map((artist) => artist.name).join(", ")}
                       </p>
                       <p className="text-sm text-zinc-500">{track.album?.name}</p>
-                      <div className="mt-1 flex gap-2">
+                      <div className="mt-1 flex gap-2 items-center">
                         {track.external_urls?.spotify ? (
                           <a
                             href={track.external_urls.spotify}
@@ -191,7 +203,7 @@ export default function Home() {
                           </a>
                         ) : null}
                         <button
-                          onClick={() => handleSaveTrack(track)}
+                          onClick={() => handleSaveTrack(track, "track")}
                           className={`text-sm font-medium ${
                             savedTrackIds.has(track.id)
                               ? "text-yellow-300 hover:text-yellow-200"
@@ -200,6 +212,15 @@ export default function Home() {
                         >
                           {savedTrackIds.has(track.id) ? "★ Saved" : "☆ Save"}
                         </button>
+                      </div>
+                      <div className="mt-2">
+                        <StarRating 
+                          spotifyId={track.id} 
+                          type="track" 
+                          name={track.name}
+                          imageUrl={track.album?.images?.[0]?.url}
+                          subtitle={track.artists.map((a) => a.name).join(", ")}
+                        />
                       </div>
                     </div>
                   </article>
@@ -238,16 +259,103 @@ export default function Home() {
                       <p className="truncate text-sm text-zinc-500">
                         {artist.genres?.slice(0, 2).join(", ") || "Genre info unavailable"}
                       </p>
-                      {artist.external_urls?.spotify ? (
-                        <a
-                          href={artist.external_urls.spotify}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-block text-sm text-[#fb3d93] hover:text-green-200"
+                      <div className="mt-2 flex items-center justify-between">
+                        {artist.external_urls?.spotify ? (
+                          <a
+                            href={artist.external_urls.spotify}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block text-sm text-[#fb3d93] hover:text-green-200"
+                          >
+                            View profile
+                          </a>
+                        ) : null}
+                        <button
+                          onClick={() => handleSaveTrack(artist, "artist")}
+                          className={`text-sm font-medium ${
+                            savedTrackIds.has(artist.id)
+                              ? "text-yellow-300 hover:text-yellow-200"
+                              : "text-zinc-400 hover:text-zinc-200"
+                          }`}
                         >
-                          View profile
-                        </a>
-                      ) : null}
+                          {savedTrackIds.has(artist.id) ? "★ Saved" : "☆ Save"}
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <StarRating 
+                          spotifyId={artist.id} 
+                          type="artist" 
+                          name={artist.name}
+                          imageUrl={artist.images?.[0]?.url}
+                          subtitle="Artist"
+                        />
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/10 bg-zinc-950/70 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Albums</h2>
+              <span className="text-sm text-zinc-400">{results.albums?.length || 0} found</span>
+            </div>
+
+            <div className="space-y-3">
+              {!results.albums || results.albums.length === 0 ? (
+                <p className="text-sm text-zinc-400">Search to see matching albums here.</p>
+              ) : (
+                results.albums.map((album) => (
+                  <article
+                    key={album.id}
+                    className="flex gap-3 rounded-2xl border border-white/10 bg-zinc-900/80 p-3"
+                  >
+                    <img
+                      src={album.images?.[0]?.url || "https://placehold.co/80x80/18181b/f4f4f5?text=💿"}
+                      alt={album.name}
+                      className="h-16 w-16 rounded-xl object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-semibold">{album.name}</h3>
+                      <p className="text-sm text-zinc-300">
+                        {album.artists.map((artist) => artist.name).join(", ")}
+                      </p>
+                      <p className="truncate text-sm text-zinc-500">
+                        {album.release_date ? `Released ${album.release_date.substring(0, 4)}` : "Album"}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between">
+                        {album.external_urls?.spotify ? (
+                          <a
+                            href={album.external_urls.spotify}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block text-sm text-[#fb3d93] hover:text-green-200"
+                          >
+                            Open in Spotify
+                          </a>
+                        ) : null}
+                        <button
+                          onClick={() => handleSaveTrack(album, "album")}
+                          className={`text-sm font-medium ${
+                            savedTrackIds.has(album.id)
+                              ? "text-yellow-300 hover:text-yellow-200"
+                              : "text-zinc-400 hover:text-zinc-200"
+                          }`}
+                        >
+                          {savedTrackIds.has(album.id) ? "★ Saved" : "☆ Save"}
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <StarRating 
+                          spotifyId={album.id} 
+                          type="album" 
+                          name={album.name}
+                          imageUrl={album.images?.[0]?.url}
+                          subtitle={album.artists.map((a) => a.name).join(", ")}
+                        />
+                      </div>
                     </div>
                   </article>
                 ))
