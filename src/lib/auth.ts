@@ -7,8 +7,6 @@ import bcrypt from "bcryptjs";
 const SPOTIFY_SCOPES = [
   "user-read-private",
   "user-read-email",
-  "user-top-read",
-  "user-library-read",
 ].join(" ");
 
 async function refreshSpotifyAccessToken(token: any): Promise<any> {

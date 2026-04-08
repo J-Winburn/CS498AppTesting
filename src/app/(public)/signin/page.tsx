@@ -135,11 +135,11 @@ export default function SignInPage() {
             <div className="grid grid-cols-1 gap-3">
               <button
                 type="button"
-                onClick={() => signIn("spotify", { callbackUrl: "/search" })}
+                onClick={() => setError("Sign in with email first, then link Spotify from your profile.")}
                 className="py-3 rounded-lg border border-zinc-800 hover:bg-zinc-800/50 transition flex items-center justify-center gap-2 font-medium"
               >
                 <span className="text-xl">🎵</span>
-                Link to Spotify
+                Link Spotify from Profile
               </button>
             </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
@@ -16,6 +16,7 @@ interface PinnedItem {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [user, setUser] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -227,6 +228,67 @@ export default function ProfilePage() {
     }
   };
 
+  const handleConnectSpotify = () => {
+    const currentUrl = new URL(window.location.href);
+    // Keep OAuth start host aligned with callback host so link cookies are available.
+    if (process.env.NODE_ENV === "development" && currentUrl.hostname === "localhost") {
+      currentUrl.hostname = "127.0.0.1";
+      currentUrl.pathname = "/api/spotify/link/start";
+      currentUrl.search = "";
+      currentUrl.hash = "";
+      window.location.href = currentUrl.toString();
+      return;
+    }
+
+    window.location.href = "/api/spotify/link/start";
+  };
+
+  const handleDisconnectSpotify = async () => {
+    try {
+      const response = await fetch("/api/spotify/link", { method: "DELETE" });
+      if (!response.ok) {
+        const payload = await response.json();
+        setMessage({ type: "error", text: payload.error || "Failed to disconnect Spotify." });
+        return;
+      }
+
+      setUser((prev: any) => ({
+        ...prev,
+        spotifyId: null,
+      }));
+      setMessage({ type: "success", text: "Spotify account disconnected." });
+    } catch {
+      setMessage({ type: "error", text: "Failed to disconnect Spotify." });
+    }
+  };
+
+  useEffect(() => {
+    const linked = searchParams.get("spotify_linked");
+    const spotifyError = searchParams.get("spotify_error");
+
+    if (linked === "1") {
+      setMessage({ type: "success", text: "Spotify account linked successfully." });
+      router.replace("/profile");
+      return;
+    }
+
+    if (spotifyError) {
+      const normalized = decodeURIComponent(spotifyError);
+      if (normalized === "session_expired") {
+        setMessage({
+          type: "error",
+          text: "Spotify link session expired. Open the app on http://127.0.0.1:3000 and try again.",
+        });
+        router.replace("/profile");
+        return;
+      }
+
+      const readable = normalized.replace(/_/g, " ");
+      setMessage({ type: "error", text: `Spotify link failed: ${readable}` });
+      router.replace("/profile");
+    }
+  }, [searchParams, router]);
+
   if (!user) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center">
@@ -348,6 +410,34 @@ export default function ProfilePage() {
                       <p className="text-zinc-500 text-sm">No genres selected</p>
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold mb-3">Spotify Account</h2>
+                  {user.spotifyId ? (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-800 p-3">
+                      <p className="text-sm text-zinc-200">Connected as Spotify user ID: {user.spotifyId}</p>
+                      <button
+                        onClick={handleDisconnectSpotify}
+                        className="rounded-md border border-red-400/40 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/10 transition"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-800 p-3">
+                      <p className="text-sm text-zinc-300">No Spotify account linked yet.</p>
+                      <button
+                        onClick={handleConnectSpotify}
+                        className="rounded-md px-3 py-1.5 text-xs font-semibold text-black transition"
+                        style={{ backgroundColor: "#1DB954" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1aa34a")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1DB954")}
+                      >
+                        Connect Spotify
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Pinned Songs & Albums */}
