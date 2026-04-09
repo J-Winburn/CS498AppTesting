@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import { prisma } from "./prisma";
@@ -21,34 +20,8 @@ export async function getCurrentUser() {
       if (userBySpotifyId) return userBySpotifyId;
     }
   } catch {
-    // Continue to fallback lookup.
-  }
-
-  // Legacy fallback: custom Spotify cookie flow if there is no valid app session.
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("spotify_access_token")?.value;
-
-  if (!accessToken) {
     return null;
   }
 
-  try {
-    const response = await fetch("https://api.spotify.com/v1/me", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const spotifyUser = (await response.json()) as { id: string };
-    const user = await prisma.user.findUnique({
-      where: { spotifyId: spotifyUser.id },
-    });
-    return user;
-  } catch {
-    return null;
-  }
+  return null;
 }
