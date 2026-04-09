@@ -5,7 +5,7 @@ Next.js application that allows users to rate and review songs, albums, and arti
 ## Guide to Run Locally
 
 1. `npm install`
-2. Create `.env.local` and set:
+2. Copy `.env.example` to `.env.local` and set:
    - `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` from the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - `SPOTIFY_LINK_REDIRECT_URI` — `http://127.0.0.1:3000/api/spotify/link/callback`
    - `NEXTAUTH_URL` — `http://127.0.0.1:3000`

@@ -97,6 +97,16 @@ export default function ProfilePage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  //clear profile message update after 5 seconds
+  useEffect(() => {
+    if (!message) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setMessage(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -639,7 +649,7 @@ export default function ProfilePage() {
                       Favorite Genres
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {["Pop", "Hip-Hop", "R&B", "Rock", "Alternative", "Electronic", "Dance", "Jazz", "Classical", "Country", "Latin", "Metal", "Indie", "Soul", "Reggae"].map((genre) => {
+                      {["Pop", "Hip-Hop","Rap", "R&B", "Rock", "Alternative", "Electronic", "Dance", "Jazz", "Classical", "Country", "Latin", "Metal", "Indie", "Soul", "Reggae"].map((genre) => {
                         const selected = formData.musicGenres.includes(genre);
                         return (
                           <button

@@ -4,7 +4,7 @@ export const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
 export const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 export const SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1";
 
-export const SPOTIFY_LINK_SCOPES = ["user-read-private", "user-read-email"];
+export const SPOTIFY_LINK_SCOPES = ["user-read-private", "user-read-email","user-top-read", "user-library-read"];
 
 export const SPOTIFY_LINK_STATE_COOKIE = "spotify_link_state";
 export const SPOTIFY_LINK_VERIFIER_COOKIE = "spotify_link_verifier";
@@ -56,12 +56,12 @@ export function getSpotifyLinkRedirectUri(): string {
 
   return redirectUri;
 }
-
+//securely generate a random PKCE verifier string, and state for later verification in callback.
 export function createPkceVerifier(): string {
   return randomBytes(64).toString("base64url");
 }
 
-export function createPkceChallenge(verifier: string): string {
+export function createPkceChallenge(verifier: string): string { 
   return createHash("sha256").update(verifier).digest("base64url");
 }
 
@@ -86,7 +86,7 @@ export function buildSpotifyAuthorizeUrl(params: {
   url.searchParams.set("scope", (params.scopes ?? SPOTIFY_LINK_SCOPES).join(" "));
   return url;
 }
-
+//exchange authorization code for access and refresh tokens from spotify
 export async function exchangeCodeForTokens(params: {
   code: string;
   codeVerifier: string;
@@ -107,7 +107,7 @@ export async function exchangeCodeForTokens(params: {
     }),
     cache: "no-store",
   });
-
+  //handle potential errors and extract error message from spotify response if available
   const payload = (await response.json()) as SpotifyTokenResponse & SpotifyErrorEnvelope;
   if (!response.ok) {
     throw new Error(extractSpotifyErrorMessage(payload, response.status, "Spotify token exchange failed."));

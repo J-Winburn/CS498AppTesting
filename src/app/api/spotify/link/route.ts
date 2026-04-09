@@ -4,16 +4,16 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) {
+  if (!user) { //check if user is authenticated
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   return NextResponse.json({
-    connected: Boolean(user.spotifyId),
-    spotifyId: user.spotifyId,
+    connected: Boolean(user.spotifyId), //check if spotifyId exists to determine if connected
+    spotifyId: user.spotifyId, //return spotifyId for reference
   });
 }
-
+//disconnect spotify account by clearing spotify related fields in the database
 export async function DELETE() {
   const user = await getCurrentUser();
   if (!user) {
@@ -27,10 +27,10 @@ export async function DELETE() {
       spotifyAccessToken: null,
       spotifyRefreshToken: null,
       spotifyTokenExpiresAt: null,
-      authProvider: user.authProvider === "both" ? "native" : user.authProvider,
+      authProvider: user.authProvider === "both" ? "native" : user.authProvider, //if user has both native and spotify, keep native as provider after disconnecting spotify
     },
   });
-
+  //return updated spotify connection status and spotifyId (which should be null after disconnect)
   return NextResponse.json({
     connected: Boolean(updated.spotifyId),
     spotifyId: updated.spotifyId,
