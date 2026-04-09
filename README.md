@@ -7,12 +7,11 @@ Next.js application that allows users to rate and review songs, albums, and arti
 1. `npm install`
 2. Create `.env.local` and set:
    - `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` from the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - `SPOTIFY_REDIRECT_URI` — `http://127.0.0.1:3000/api/auth/callback/spotify` (for the Spotify Creator dashboard)
+   - `SPOTIFY_LINK_REDIRECT_URI` — `http://127.0.0.1:3000/api/spotify/link/callback`
    - `NEXTAUTH_URL` — `http://127.0.0.1:3000`
    - `NEXTAUTH_SECRET` — run `npx auth secret`
    - `DATABASE_URL` — Postgres connection string
    - `REPLICATE_API_TOKEN` (optional, only needed for `/generate` endpoints)
-   - `SPOTIFY_LINK_REDIRECT_URI` — `http://127.0.0.1:3000/api/spotify/link/callback` (for linking Spotify to profile)
 3. In the Spotify app settings, add this exact redirect URI:
    - `http://127.0.0.1:3000/api/spotify/link/callback`
 4. Run Prisma setup:
