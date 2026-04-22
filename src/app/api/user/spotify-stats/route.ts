@@ -12,14 +12,12 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    if (!user.spotifyId) {
-      return NextResponse.json({ error: "Spotify not linked" }, { status: 403 });
-    }
-
-    // Get access token for this user
-    const accessToken = await getValidSpotifyAccessTokenForUser(user.id);
+    const accessToken = await getValidSpotifyAccessTokenForUser(req, user.id);
     if (!accessToken) {
-      return NextResponse.json({ error: "Spotify access token not found" }, { status: 403 });
+      return NextResponse.json(
+        { error: "No Spotify session — sign in with Spotify or link your account when that is available." },
+        { status: 403 },
+      );
     }
 
     // Parse time_range from query params, default to 'medium_term'

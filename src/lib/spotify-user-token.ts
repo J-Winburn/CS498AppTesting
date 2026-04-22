@@ -1,48 +1,31 @@
-import { prisma } from "@/lib/prisma";
-import { getExpiryDate, refreshAccessToken } from "@/lib/spotify-link";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-const EXPIRY_SKEW_MS = 60_000;
+/**
+ * Read Spotify access token from NextAuth JWT (OAuth sign-in).
+ * Persistent per-user tokens were previously in Prisma; revisit with Supabase + linked-account flow if needed.
+ */
+export async function getValidSpotifyAccessTokenForUser(
+  req: NextRequest,
+  userId: string,
+): Promise<string | null> {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) return null;
 
-export async function getValidSpotifyAccessTokenForUser(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      spotifyAccessToken: true,
-      spotifyRefreshToken: true,
-      spotifyTokenExpiresAt: true,
-    },
-  });
+  const token = await getToken({ req, secret });
+  if (!token?.sub || token.sub !== userId) return null;
 
-  if (!user?.spotifyAccessToken || !user.spotifyRefreshToken || !user.spotifyTokenExpiresAt) {
-    throw new Error("Spotify account is not linked.");
+  const accessToken = token.accessToken as string | undefined;
+  if (!accessToken) return null;
+
+  const accessTokenExpires = token.accessTokenExpires as number | undefined;
+  if (
+    typeof accessTokenExpires === "number" &&
+    Number.isFinite(accessTokenExpires) &&
+    Date.now() >= accessTokenExpires - 60_000
+  ) {
+    return null;
   }
 
-  const expiresSoon = user.spotifyTokenExpiresAt.getTime() <= Date.now() + EXPIRY_SKEW_MS;
-  if (!expiresSoon) {
-    return user.spotifyAccessToken;
-  }
-
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Spotify token refresh is not configured.");
-  }
-
-  const refreshed = await refreshAccessToken({
-    refreshToken: user.spotifyRefreshToken,
-    clientId,
-    clientSecret,
-  });
-
-  // Persist refreshed credentials so subsequent API calls reuse valid tokens.
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      spotifyAccessToken: refreshed.access_token,
-      spotifyRefreshToken: refreshed.refresh_token ?? user.spotifyRefreshToken,
-      spotifyTokenExpiresAt: getExpiryDate(refreshed.expires_in),
-    },
-  });
-
-  return refreshed.access_token;
+  return accessToken;
 }
