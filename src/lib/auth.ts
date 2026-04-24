@@ -7,6 +7,7 @@ import { getSupabaseAdminOrNull } from "@/lib/supabase-admin";
 const SPOTIFY_SCOPES = [
   "user-read-private",
   "user-read-email",
+  "user-top-read",
 ].join(" ");
 
 async function refreshSpotifyAccessToken(token: any): Promise<any> {

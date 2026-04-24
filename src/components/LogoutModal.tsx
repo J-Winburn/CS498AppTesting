@@ -15,7 +15,26 @@ export default function LogoutModal({
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      await signOut({ callbackUrl: "/" });
+      const callbackUrl = `${window.location.origin}/`;
+      const firstResult = await signOut({
+        redirect: false,
+        callbackUrl,
+      });
+
+      // Some linked-account sessions keep an additional auth cookie on first sign-out.
+      // Run a second pass to make one click fully terminate the session.
+      const secondResult = await signOut({
+        redirect: false,
+        callbackUrl,
+      });
+
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      window.location.replace(secondResult?.url ?? firstResult?.url ?? callbackUrl);
     } catch (error) {
       console.error("Logout failed:", error);
       setIsLoading(false);

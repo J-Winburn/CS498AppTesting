@@ -13,6 +13,7 @@ const poppins = Poppins({
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-poppins",
 });
+import DevHostCanonicalizer from "@/components/DevHostCanonicalizer";
 
 export const metadata: Metadata = {
   title: "TuneHeadz - Music Discovery & AI Generation",
@@ -38,6 +39,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning className={poppins.variable}>
+        <DevHostCanonicalizer />
         <Providers session={session}>
           <AlbumAmbientProvider>
             <Header initialSession={session} />

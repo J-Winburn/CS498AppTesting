@@ -475,7 +475,7 @@ export default function LiveSpotifySearch({
                   key={genre.slug}
                   href={`/search/genre/${genre.slug}`}
                   onClick={() => setGenreOpen(false)}
-                  className={`th-genre-dropdown-card relative overflow-hidden rounded-xl bg-gradient-to-br ${genre.gradient} p-4 shadow-md motion-safe:hover:shadow-lg`}
+                  className={`th-genre-dropdown-card relative overflow-hidden rounded-xl bg-linear-to-br ${genre.gradient} p-4 shadow-md motion-safe:hover:shadow-lg`}
                 >
                   <span className="text-2xl font-semibold tracking-tight text-white/95 md:text-3xl">
                     {genre.title}

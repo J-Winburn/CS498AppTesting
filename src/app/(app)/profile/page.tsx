@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -40,6 +40,42 @@ type ListItem = {
   itemCount: number;
 };
 
+type SpotifyArtist = {
+  id: string;
+  name: string;
+  images: { url: string }[];
+  genres: string[];
+  popularity: number;
+  external_urls: { spotify: string };
+};
+
+type SpotifyTrack = {
+  id: string;
+  name: string;
+  artists: { id: string; name: string }[];
+  album: { name: string; images: { url: string }[] };
+  duration_ms: number;
+  external_urls: { spotify: string };
+};
+
+type SpotifyStats = {
+  top_artists: SpotifyArtist[];
+  top_tracks: SpotifyTrack[];
+};
+
+type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
+
+const TIME_RANGE_LABELS: Record<SpotifyTimeRange, string> = {
+  short_term: "Past 4 Weeks",
+  medium_term: "Past 6 Months",
+  long_term: "Past Year",
+};
+
+function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
 const LOCAL_PROFILE_KEY = "tuneheadz.localProfileDraft";
 
 export default function ProfilePage() {
@@ -52,6 +88,11 @@ export default function ProfilePage() {
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [lists, setLists] = useState<ListItem[]>([]);
+  const [spotifyTimeRange, setSpotifyTimeRange] = useState<SpotifyTimeRange>("medium_term");
+  const [spotifyView, setSpotifyView] = useState<"artists" | "tracks">("artists");
+  const [spotifyStats, setSpotifyStats] = useState<SpotifyStats | null>(null);
+  const [spotifyLoading, setSpotifyLoading] = useState(false);
+  const [spotifyError, setSpotifyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -137,7 +178,84 @@ export default function ProfilePage() {
     })();
   }, [status]);
 
-  const tabs = ["Profile", "Activity", "Albums", "Journal", "Reviews", "Playlists", "Lists"];
+  const fetchSpotifyStats = useCallback(async (range: SpotifyTimeRange) => {
+    setSpotifyLoading(true);
+    setSpotifyError(null);
+    setSpotifyStats(null);
+    try {
+      const res = await fetch(`/api/user/spotify-stats?time_range=${range}`);
+      if (res.status === 403) {
+        setSpotifyError("not-connected");
+        return;
+      }
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get("Retry-After") ?? "10", 10);
+        setSpotifyError(`Rate limited. Retrying in ${retryAfter}s…`);
+        setTimeout(() => fetchSpotifyStats(range), retryAfter * 1000);
+        return;
+      }
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setSpotifyError(body.error ?? "Failed to load stats.");
+        return;
+      }
+      const data = (await res.json()) as SpotifyStats;
+      setSpotifyStats({
+        top_artists: (data.top_artists ?? []).map((artist) => ({
+          ...artist,
+          images: artist.images ?? [],
+          genres: artist.genres ?? [],
+          external_urls: artist.external_urls ?? { spotify: "#" },
+        })),
+        top_tracks: (data.top_tracks ?? []).map((track) => ({
+          ...track,
+          artists: track.artists ?? [],
+          album: {
+            ...track.album,
+            name: track.album?.name ?? "Unknown album",
+            images: track.album?.images ?? [],
+          },
+          external_urls: track.external_urls ?? { spotify: "#" },
+        })),
+      });
+    } catch {
+      setSpotifyError("Network error. Please try again.");
+    } finally {
+      setSpotifyLoading(false);
+    }
+  }, []);
+
+  const disconnectSpotify = useCallback(async () => {
+    setSpotifyLoading(true);
+    setSpotifyError(null);
+
+    try {
+      const res = await fetch("/api/spotify/link", {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setSpotifyError(body.error ?? "Failed to disconnect Spotify.");
+        return;
+      }
+
+      setSpotifyStats(null);
+      setSpotifyError("not-connected");
+    } catch {
+      setSpotifyError("Failed to disconnect Spotify.");
+    } finally {
+      setSpotifyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "Spotify Stats" && status === "authenticated") {
+      fetchSpotifyStats(spotifyTimeRange);
+    }
+  }, [activeTab, spotifyTimeRange, status, fetchSpotifyStats]);
+
+  const tabs = ["Profile", "Activity", "Albums", "Journal", "Reviews", "Playlists", "Lists", "Spotify Stats"];
   const covers = favorites.map((f) => f.imageUrl).filter(Boolean).slice(0, 4) as string[];
   const ratedEvents = activityEvents.filter((event) => event.type === "rated");
   const thisYearCount = activityEvents.length;
@@ -229,7 +347,7 @@ export default function ProfilePage() {
                 alt="Profile banner"
                 className="h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-[#0b0b10]/95" />
+              <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/35 to-[#0b0b10]/95" />
 
               <label className="absolute right-3 top-3 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-black/50 text-white opacity-0 transition hover:border-[#fb3d93]/70 hover:text-[#ffd4e9] group-hover:opacity-100">
                 <Pencil size={15} />
@@ -390,9 +508,163 @@ export default function ProfilePage() {
                 </div>
               ) : null}
 
-              {activeTab !== "Profile" && activeTab !== "Activity" ? (
+              {activeTab !== "Profile" && activeTab !== "Activity" && activeTab !== "Spotify Stats" ? (
                 <div className="rounded-md border border-dashed border-[#2a3344] p-4 text-sm text-[#9fb0c7]">
                   {activeTab} content will populate as users log more music.
+                </div>
+              ) : null}
+
+              {activeTab === "Spotify Stats" ? (
+                <div className="space-y-5">
+                  <h3 className="border-b border-[#2a3344] pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#8ea1bb]">
+                    Your Spotify Stats
+                  </h3>
+
+                  {/* Not connected */}
+                  {spotifyError === "not-connected" && (
+                    <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-6 text-center">
+                      <p className="text-base font-semibold text-zinc-100 mb-1">Spotify not connected</p>
+                      <p className="text-sm text-zinc-400 mb-5">
+                        Connect your Spotify account to see your top artists and tracks.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { window.location.href = "/api/spotify/link/start"; }}
+                        className="inline-flex items-center gap-2 rounded-full bg-[#1DB954] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#1ed760] transition-colors"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                        </svg>
+                        Connect Spotify
+                      </button>
+                    </div>
+                  )}
+
+                  {/* General error */}
+                  {spotifyError && spotifyError !== "not-connected" && (
+                    <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                      <p className="text-sm text-red-400">{spotifyError}</p>
+                    </div>
+                  )}
+
+                  {/* Controls — shown while loading or when data is present */}
+                  {(!spotifyError || spotifyError !== "not-connected") && !spotifyLoading && !spotifyStats ? null : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      {/* Time range */}
+                      <div className="flex gap-2 flex-wrap">
+                        {(Object.entries(TIME_RANGE_LABELS) as [SpotifyTimeRange, string][]).map(([range, label]) => (
+                          <button
+                            key={range}
+                            type="button"
+                            onClick={() => setSpotifyTimeRange(range)}
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                              spotifyTimeRange === range
+                                ? "bg-[#fb3d93] text-white"
+                                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={disconnectSpotify}
+                          className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-zinc-300 transition-colors hover:border-white/30 hover:text-white"
+                        >
+                          Disconnect Spotify
+                        </button>
+                        {/* View toggle */}
+                        <div className="flex gap-1 rounded-lg bg-zinc-900 p-0.5">
+                          {(["artists", "tracks"] as const).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setSpotifyView(v)}
+                              className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                                spotifyView === v ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-zinc-200"
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Loading skeleton */}
+                  {spotifyLoading && (
+                    <ul className="space-y-2">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <li key={i} className="flex items-center gap-3 rounded-xl bg-zinc-900/50 p-2.5 animate-pulse">
+                          <div className="h-11 w-11 shrink-0 rounded-full bg-zinc-800" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="h-3 w-40 rounded bg-zinc-800" />
+                            <div className="h-2.5 w-28 rounded bg-zinc-800/70" />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Artists */}
+                  {!spotifyLoading && spotifyStats && spotifyView === "artists" && (
+                    <ol className="space-y-2">
+                      {spotifyStats.top_artists.map((artist, i) => (
+                        <li key={artist.id}>
+                          <a
+                            href={artist.external_urls.spotify}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 rounded-xl bg-zinc-900/50 hover:bg-zinc-900 p-2.5 transition-colors group"
+                          >
+                            <span className="w-5 shrink-0 text-center text-xs font-bold text-zinc-500 group-hover:text-zinc-300">{i + 1}</span>
+                            {artist.images[0]?.url ? (
+                              <img src={artist.images[0].url} alt={artist.name} className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                            ) : (
+                              <div className="h-11 w-11 shrink-0 rounded-full bg-zinc-800" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-zinc-100 truncate group-hover:text-white">{artist.name}</p>
+                              {artist.genres.length > 0 && (
+                                <p className="text-xs text-zinc-400 truncate">{artist.genres.slice(0, 3).join(", ")}</p>
+                              )}
+                            </div>
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+
+                  {/* Tracks */}
+                  {!spotifyLoading && spotifyStats && spotifyView === "tracks" && (
+                    <ol className="space-y-2">
+                      {spotifyStats.top_tracks.map((track, i) => (
+                        <li key={track.id}>
+                          <a
+                            href={track.external_urls.spotify}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 rounded-xl bg-zinc-900/50 hover:bg-zinc-900 p-2.5 transition-colors group"
+                          >
+                            <span className="w-5 shrink-0 text-center text-xs font-bold text-zinc-500 group-hover:text-zinc-300">{i + 1}</span>
+                            {track.album.images[0]?.url ? (
+                              <img src={track.album.images[0].url} alt={track.album.name} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+                            ) : (
+                              <div className="h-11 w-11 shrink-0 rounded-lg bg-zinc-800" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-zinc-100 truncate group-hover:text-white">{track.name}</p>
+                              <p className="text-xs text-zinc-400 truncate">{track.artists.map((a) => a.name).join(", ")} · {track.album.name}</p>
+                            </div>
+                            <span className="shrink-0 text-xs text-zinc-500">{formatDuration(track.duration_ms)}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                 </div>
               ) : null}
 

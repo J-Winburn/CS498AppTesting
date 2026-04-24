@@ -127,28 +127,6 @@ export default function SignInPage() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
 
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-800"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#0f1118] px-2 text-zinc-500">Or sign in with</span>
-              </div>
-            </div>
-
-            {/* Social Auth Buttons */}
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => signIn("spotify", { callbackUrl: "/" })}
-                className="th-btn-secondary flex w-full items-center justify-center gap-2 rounded-lg py-3 font-medium"
-              >
-                <span className="text-xl">🎵</span>
-                Link to Spotify
-              </button>
-            </div>
-
             <p className="text-center text-sm text-zinc-400">
               Don't have an account?{" "}
               <Link href="/signup" className="font-medium text-[#fb3d93] hover:underline">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/get-current-user";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   SPOTIFY_LINK_STATE_COOKIE,
   SPOTIFY_LINK_USER_COOKIE,
@@ -57,21 +58,50 @@ export async function GET(request: NextRequest) {
       clientId,
     });
 
-    await spotifyFetchJsonWithRetry<SpotifyMeResponse>({
+    const spotifyMe = await spotifyFetchJsonWithRetry<SpotifyMeResponse>({
       accessToken: tokenResponse.access_token,
       path: "/me",
     });
 
-    // Persisting Spotify tokens previously used Prisma; migrate to Supabase user_profiles/extra table when ready.
-    return clearCookiesAndRedirect(request, "spotify_linked", "1");
+    const profileEmail = currentUser.email ?? spotifyMe.email;
+    if (!profileEmail) {
+      throw new Error("Cannot link Spotify without an email on the current account.");
+    }
+
+    const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString();
+
+    const supabase = getSupabaseAdmin();
+    const { error: upsertError } = await supabase
+      .from("user_profiles")
+      .upsert({
+        user_id: currentUser.id,
+        email: profileEmail,
+        updated_at: new Date().toISOString(),
+        spotify_id: spotifyMe.id,
+        spotify_access_token: tokenResponse.access_token,
+        spotify_refresh_token: tokenResponse.refresh_token ?? null,
+        spotify_token_expires_at: expiresAt,
+        spotify_scope: tokenResponse.scope ?? null,
+      }, { onConflict: "user_id" });
+
+    if (upsertError) {
+      throw new Error(`Failed to save Spotify tokens: ${upsertError.message}`);
+    }
+
+    return clearCookiesAndRedirect(request, "spotify_linked", "1", "/spotify-linked");
   } catch (error) {
     const message = error instanceof Error ? error.message : "link_failed";
     return clearCookiesAndRedirect(request, "spotify_error", message);
   }
 }
 
-function clearCookiesAndRedirect(request: NextRequest, queryKey: string, queryValue: string) {
-  const redirectUrl = new URL("/profile", request.url);
+function clearCookiesAndRedirect(
+  request: NextRequest,
+  queryKey: string,
+  queryValue: string,
+  pathname = "/profile"
+) {
+  const redirectUrl = new URL(pathname, request.url);
   redirectUrl.searchParams.set(queryKey, queryValue);
 
   const response = NextResponse.redirect(redirectUrl);

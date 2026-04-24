@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/get-current-user";
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import {
   SPOTIFY_LINK_STATE_COOKIE,
   SPOTIFY_LINK_USER_COOKIE,
@@ -11,21 +11,22 @@ import {
   getSpotifyLinkRedirectUri,
 } from "@/lib/spotify-link";
 
-export async function GET() {
-  const user = await getCurrentUser(); //check user authentication
-  if (!user) {
-    return NextResponse.redirect("/signin?error=auth_required");
-  }
-
-  const clientId = process.env.SPOTIFY_CLIENT_ID; // from env file 
-  if (!clientId) {
-    return NextResponse.json(
-      { error: "SPOTIFY_CLIENT_ID is not configured." }, //not authenticated error
-      { status: 500 }
-    );
-  }
-
+export async function GET(req: NextRequest) {
   const redirectUri = getSpotifyLinkRedirectUri();
+
+  const secret = process.env.NEXTAUTH_SECRET;
+  const token = secret ? await getToken({ req, secret }) : null;
+  if (!token?.sub) {
+    const base = process.env.NEXTAUTH_URL ?? `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+    return NextResponse.redirect(new URL("/signin?error=auth_required", base));
+  }
+  const userId = token.sub;
+
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  if (!clientId) {
+    return NextResponse.json({ error: "SPOTIFY_CLIENT_ID is not configured." }, { status: 500 });
+  }
+
   const state = createOAuthState();
   const verifier = createPkceVerifier(); //genereate PKCE verifier
   const challenge = createPkceChallenge(verifier); //challenfe for PKCE flow based on verifier
@@ -58,7 +59,7 @@ export async function GET() {
     maxAge: 600,
   });
 
-  response.cookies.set(SPOTIFY_LINK_USER_COOKIE, user.id, {
+  response.cookies.set(SPOTIFY_LINK_USER_COOKIE, userId, {
     httpOnly: true,
     secure,
     sameSite: "lax",

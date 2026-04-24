@@ -86,6 +86,12 @@ export default function Header({
                 Lists
               </Link>
             ) : null}
+
+            {isAuthed ? (
+              <Link href="/stats" className={HERO_NAV_LINK_CLASS}>
+                Stats
+              </Link>
+            ) : null}
           </div>
 
           {isAuthed ? (
@@ -119,6 +125,15 @@ export default function Header({
                         role="menuitem"
                       >
                         Listenlist
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/stats"
+                        className="block px-4 py-2 hover:bg-[#252b36] hover:text-white"
+                        role="menuitem"
+                      >
+                        Spotify Stats
                       </Link>
                     </li>
                     <li>
